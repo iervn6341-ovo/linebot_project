@@ -171,11 +171,9 @@ class Web_crawler():
 			
 			#重要!! 分兩次傳送是因為一次傳送訊息的emoji數量不能超過20個
 			for i in self.load_file.id_list:
-				#self.line_api.send_message(i, output_str, emojis=True)
-				self.line_api.send_message("Ueea1498b70a1795aceac5537f1fa8d11", output_str, emojis=True)
+				self.line_api.send_message(i, output_str, emojis=True)
 				output_str = next_week_price_info
-				#self.line_api.send_message(i, output_str, emojis=True)
-				self.line_api.send_message("Ueea1498b70a1795aceac5537f1fa8d11", output_str, emojis=True)
+				self.line_api.send_message(i, output_str, emojis=True)
 		else:
 			print("data duplicate")
 			
