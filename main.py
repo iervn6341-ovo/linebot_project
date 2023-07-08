@@ -5,7 +5,7 @@ class Load_file():
 	#讀取、關閉檔案
 	def load_file(self, close_file=False):
 		if os.path.exists('./data.json') == False:
-			file = open('data.json', 'w+', encoding="utf-8")
+			file = open('./data.json', 'w+', encoding="utf-8")
 			file.close()
 			data_dict = {
 				"oil_data" : 
@@ -14,28 +14,33 @@ class Load_file():
 							"92汽油" : "0",
 							"95汽油" : "0",
 							"98汽油" : "0",
-							"日期" : "0",
-							"調漲" : "0"
+							"下周預估" : "0",
 						}
 					]
 			}
+
+			#ithome鐵人賽:需馬賽克,涉嫌個人資料
+			userid_dict = {'Ueea1498b70a1795aceac5537f1fa8d11', 2, "陳翰祺"}
 			json.dump(data_dict, open('data.json', 'w+'), ensure_ascii=False)
 			
-		if os.path.exists('userid.json') == False:
-			file = open('userid.json', 'w+', encoding="utf-8")
+		if os.path.exists('./userid.json') == False:
+			file = open('./userid.json', 'w+', encoding="utf-8")
 			file.close()
-			json.dump({}, open('userid.json', 'w+'), ensure_ascii=False)
+			json.dump({}, open('./userid.json', 'w+', encoding="utf-8"), ensure_ascii=False)
 		
 		if close_file == True:
 			self.d.close()
 			self.u.close()
 			return True
 		
-		with open("data.json", 'r+') as self.d:
+		with open("./data.json", 'r+', encoding="utf-8") as self.d:
 			self.data = json.load(self.d)
 		
-		with open("userid.json", 'r+') as self.u:
+		with open("./userid.json", 'r+', encoding="utf-8") as self.u:
 			self.userid = json.load(self.u)
+			self.id_list = []
+			for i in range(0, len(self.userid), 3):
+				self.id_list.append(self.userid[i])
 
 #line bot 資料
 class Line_api():
@@ -85,6 +90,7 @@ class Line_api():
 	#for_index	-> message的索引位置
 	#target_array -> 指定改變陣列
 	def replace_emoji(self, for_index, emoji_id, target_array):
+		#append到list的sample, 修改indext成for_index的值跟emojiId修改成emoji_id的值就好
 		data = {
 			"index": -1,
 			"productId": "5ac21a8c040ab15980c9b43f",
@@ -118,53 +124,58 @@ class Web_crawler():
 	
 	#查詢油價
 	def check_oil_price(self, search_now=False):
-		url = "https://www.cpc.com.tw/"
+		url = "https://gas.goodlife.tw/"
 		price_array = []
-		keyword = ["92汽油",
-				   "95汽油",
-				   "98汽油",
-				   "日期",
-				   "調漲"
-				   ]
-		
+		next_week_price_info = ""
+		output_keyword = [
+			"92汽油",
+			"95汽油",
+			"98汽油",
+		]
+		search_keyword = [
+			"92:",
+			"95油價:",
+			"98:",
+		]
 		output_str = ""
 		self.duplicate_data = False
 		
-		chrome_options = Options()
-		chrome_options.add_argument("--headless")
-		chrome_options.add_argument('--no-sandbox')
+		html = requests.get(url)
+		#此網站編碼使用ISO-8859-1需更改編碼為utf-8
+		soup = BeautifulSoup(html.content, "html.parser", from_encoding='utf-8')
 
-		driver = webdriver.Chrome(options=chrome_options)
-		driver.get(url)
-		
-		#爬取資料
-		price = driver.find_elements(By.CLASS_NAME, "price")
-		since = driver.find_element(By.CLASS_NAME, "since")
-		oil_status = driver.find_element(By.CLASS_NAME, "sys").text + driver.find_element(By.CLASS_NAME, "rate").text
-		
-		#價格陣列
-		for i in range(3):
-			price_array.append(float(price[i].text))
+		#油價
+		for i in search_keyword:
+			price = soup.find(lambda tag:tag.name=='li' and i in tag.text)
+			price = price.text.split("\n")
+			price_array.append(price[2])
 
+		#下周油價
+		data = soup.find("li", class_="main").text.split()
+		next_week_price_info = "自"
+		for i in range(1, 10):
+			next_week_price_info += data[i]
+   
 		#檢查資訊是否重複
 		if search_now == False:
-			self.check_duplicate_data(price_array, keyword)
-		
+			self.check_duplicate_data(price_array, output_keyword)
+		print("test")
 		if self.duplicate_data == False:
 			data = self.load_file.data
 			for i in range(3):
-				output_str += "目前" + keyword[i] + "價格:" + str(price_array[i]) + "\n"
-				data["oil_data"][0][keyword[i]] = price_array[i]
+				output_str += "目前" + output_keyword[i] + "價格:" + str(price_array[i]) + "\n"
+				data["oil_data"][0][output_keyword[i]] = price_array[i]
 				
-			data["oil_data"][0][keyword[3]] = since.text
-			data["oil_data"][0][keyword[4]] = oil_status
+			data["oil_data"][0]["下周預估"] = next_week_price_info
 			json.dump(data, open('data.json', 'w', encoding="utf-8"), ensure_ascii=False)
 			
 			#重要!! 分兩次傳送是因為一次傳送訊息的emoji數量不能超過20個
-			self.line_api.send_message('Ueea1498b70a1795aceac5537f1fa8d11', output_str, emojis=True)
-			
-			output_str = since.text + " " + oil_status + "元"
-			self.line_api.send_message('Ueea1498b70a1795aceac5537f1fa8d11', output_str, emojis=True)
+			for i in self.load_file.id_list:
+				#self.line_api.send_message(i, output_str, emojis=True)
+				self.line_api.send_message("Ueea1498b70a1795aceac5537f1fa8d11", output_str, emojis=True)
+				output_str = next_week_price_info
+				#self.line_api.send_message(i, output_str, emojis=True)
+				self.line_api.send_message("Ueea1498b70a1795aceac5537f1fa8d11", output_str, emojis=True)
 		else:
 			print("data duplicate")
 			
@@ -220,7 +231,7 @@ def get_reply():
 	try:
 		signature = request.headers['X-Line-Signature']
 		line_api.handler.handle(body, signature)
-		#tk = json_data['events'][0]['replyToken']
+		#reply_token = json_data['events'][0]['replyToken']
 		user_id = json_data['events'][0]["source"]['userId']
 		text = json_data['events'][0]['message']['text']
 		chatbot.chating(user_id, text)
@@ -248,6 +259,7 @@ def jobs3():
 		])
 	
 if __name__ == "__main__":
+        #for line-bok-sdk v3.0 up
 	warnings.filterwarnings("ignore", category=LineBotSdkDeprecatedIn30)
 	#多執行緒工作
 	jobs = []
@@ -266,4 +278,3 @@ if __name__ == "__main__":
 	
 	if status:
 		print("All process done!")
-#change
