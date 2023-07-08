@@ -159,7 +159,7 @@ class Web_crawler():
 		#檢查資訊是否重複
 		if search_now == False:
 			self.check_duplicate_data(price_array, output_keyword)
-		print("test")
+		
 		if self.duplicate_data == False:
 			data = self.load_file.data
 			for i in range(3):
