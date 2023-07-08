@@ -237,13 +237,20 @@ def jobs2():
         crawler.check_oil_price()
         time.sleep(86400) #one day = 86400
         #time.sleep(3)
-        
+
+def jobs3():
+    try:
+        subprocess.run(["ngrok http --domain=8ccb1e3131d3-15376459858684696283.ngrok-free.app 5000"])
+    except Exception as e:
+        print(e)
+    
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=LineBotSdkDeprecatedIn30)
     #多執行緒工作
     jobs = []
     jobs.append(threading.Thread(target=jobs1))
     jobs.append(threading.Thread(target=jobs2))
+    jobs.append(threading.Thread(target=jobs3))
     
     for i in range(len(jobs)):
             jobs[i].start()
