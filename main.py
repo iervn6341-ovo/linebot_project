@@ -239,10 +239,12 @@ def jobs2():
         #time.sleep(3)
 
 def jobs3():
-    try:
-        subprocess.run(["ngrok http --domain=8ccb1e3131d3-15376459858684696283.ngrok-free.app 5000"])
-    except Exception as e:
-        print(e)
+        subprocess.run([
+		"ngrok", 
+		"http", 
+		"--domain=8ccb1e3131d3-15376459858684696283.ngrok-free.app", 
+		"5000"
+	])
     
 if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=LineBotSdkDeprecatedIn30)
